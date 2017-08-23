@@ -1,5 +1,5 @@
 niilearn:
-  image: niiknow/niilearn:1.0.0
+  image: niiknow/niilearn:1.0.1
   restart: always
   volumes_from:
     - niilearn-datavolume
@@ -11,6 +11,7 @@ niilearn:
     io.rancher.scheduler.affinity:host_label: host=9
 
 niilearn-datavolume:
+  image: niiknow/niilearn:1.0.1
   net: none
   labels:
     io.rancher.container.hostname_override: container_name
@@ -18,4 +19,3 @@ niilearn-datavolume:
   volumes:
     - /app/data
   entrypoint: /bin/true
-  image: busybox
