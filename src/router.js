@@ -2,48 +2,59 @@ const fs = require('fs');
 const csv = require('csvtojson');
 const express = require('express');
 const bayes = require('bayes');
+const cacheManager = require('cache-manager');
 
 const router = express();
 const dataPath = process.env.NIILEARN_DATAPATH || '/app/data';
-const bayesModels = {};
+const bayesModels = cacheManager.caching({
+  store: 'memory',
+  max: 100,
+  ttl: 120 /* seconds */
+});
 
 const handleBayesPost = (req, res, dataset, labels) => {
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
-  let classifier = bayesModels[req.params.model] || bayes();
-
   if (dataset.length <= 0 || dataset.length !== labels.length) {
     return res.send({
       message: 'data is empty or length does not match labels length.'
     });
   }
 
-  // expect both dataset and labels to be array of strings
-  fs.readFile(dataFile, (err, data) => {
-    if (!err && data) {
-      classifier = classifier.fromJson(data.toString());
+  bayesModels.get(req.params.model, (err, result) => {
+    let classifier = bayes();
+    if (!err) {
+      classifier = result || bayes();
     }
 
-    bayesModels[req.params.model] = classifier;
-    dataset.forEach((v, i) => {
-      // normalize multiple space into one
-      classifier.learn(v.replace(/\s+/gi, ' '), labels[i]);
-    });
-    data = classifier.toJson();
-    fs.writeFile(dataFile, data, err => {
-      if (err) {
-        throw err;
+    // expect both dataset and labels to be array of strings
+    fs.readFile(dataFile, (err, data) => {
+      if (!err && data) {
+        classifier = classifier.fromJson(data.toString());
       }
 
-      // send a response message back on last iteration!
-      res.send({
-        message: `${dataset.length} samples added to database.`
+      bayesModels.set(req.params.model, classifier, () => {});
+
+      dataset.forEach((v, i) => {
+        // normalize multiple space into one
+        classifier.learn(v.replace(/\s+/gi, ' '), labels[i]);
+      });
+      data = classifier.toJson();
+      fs.writeFile(dataFile, data, err => {
+        if (err) {
+          throw err;
+        }
+
+        // send a response message back on last iteration!
+        res.send({
+          message: `${dataset.length} samples added to database.`
+        });
       });
     });
   });
 };
 
 router.post('/bayes/reset/:model', (req, res) => {
-  bayesModels[req.params.model] = bayes();
+  bayesModels.set(req.params.model, bayes(), () => {});
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
   fs.unlink(dataFile, () => {
     res.send({
@@ -83,33 +94,36 @@ router.post('/bayes/train/:model', (req, res) => {
 router.post('/bayes/classify/:model', (req, res) => {
   const body = req.body;
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
-  let classifier = bayesModels[req.params.model];
-  if (!classifier) {
-    classifier = bayes();
-  }
-  fs.readFile(dataFile, (err, data) => {
-    if (!err && data) {
-      // console.log(data.toString());
-      classifier = bayes.fromJson(data.toString());
-      bayesModels[req.params.model] = classifier;
+
+  bayesModels.get(req.params.model, (err, result) => {
+    let classifier = bayes();
+    if (!err) {
+      classifier = result || bayes();
     }
-    if (body.text) {
-      const rst = classifier.categorize(body.text.replace(/\s+/gi, ' '));
-      res.send({
-        text: body.text,
-        result: [rst]
-      });
-    } else {
-      // handle bulk dataset
-      const dataset = body.dataset || [];
-      const rst = [];
-      dataset.forEach(v => {
-        rst.push(classifier.categorize((v || '').replace(/\s+/gi, ' ')));
-      });
-      res.send({
-        result: rst
-      });
-    }
+    fs.readFile(dataFile, (err, data) => {
+      if (!err && data) {
+        // console.log(data.toString());
+        classifier = bayes.fromJson(data.toString());
+        bayesModels.set(req.params.model, classifier, () => {});
+      }
+      if (body.text) {
+        const rst = classifier.categorize(body.text.replace(/\s+/gi, ' '));
+        res.send({
+          text: body.text,
+          result: [rst]
+        });
+      } else {
+        // handle bulk dataset
+        const dataset = body.dataset || [];
+        const rst = [];
+        dataset.forEach(v => {
+          rst.push(classifier.categorize((v || '').replace(/\s+/gi, ' ')));
+        });
+        res.send({
+          result: rst
+        });
+      }
+    });
   });
 });
 
