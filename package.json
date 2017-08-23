@@ -1,12 +1,12 @@
 {
   "name": "niilearn",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Machine Learning REST API",
   "main": "index.js",
   "scripts": {
     "start": "cross-env NODE_ENV=dev nodemon ./index.js",
     "test": "xo && cross-env NODE_ENV=test nyc ava --verbose --fail-fast",
-    "docker:start": "chown -R nodeuser:nodeuser /app && su -m nodeuser -c 'cross-env NODE_ENV=production pm2-docker start ./index.js'"
+    "docker:start": "chown -R nodeuser:nodeuser /app/data && su -m nodeuser -c 'cross-env NODE_ENV=production pm2-docker start ./index.js'"
   },
   "engines": {
     "node": ">=8",
