@@ -11,19 +11,41 @@ const bayesModels = cacheManager.caching({
   max: 100,
   ttl: 120 /* seconds */
 });
+const illegalChars = /[^a-zA-Z0-9-_]/gi;
 
 const handleBayesPost = (req, res, dataset, labels) => {
-  const dataFile = `${dataPath}/bayes_${req.params.model}`;
+  const modelName = req.params.model.replace(illegalChars, '');
+  const dataFile = `${dataPath}/bayes_${modelName}`;
   if (dataset.length <= 0 || dataset.length !== labels.length) {
     return res.send({
       message: 'data is empty or length does not match labels length.'
     });
   }
 
-  bayesModels.get(req.params.model, (err, result) => {
+  const doTraining = classifier => {
+    bayesModels.set(modelName, classifier, () => {});
+
+    dataset.forEach((v, i) => {
+      // normalize multiple space into one
+      classifier.learn(v.toLowerCase(), labels[i]);
+    });
+
+    fs.writeFile(dataFile, classifier.toJson(), err => {
+      if (err) {
+        throw err;
+      }
+
+      // send a response message back on last iteration!
+      res.send({
+        message: `${dataset.length} samples added to database.`
+      });
+    });
+  };
+
+  bayesModels.get(modelName, (err, result) => {
     let classifier = bayes();
-    if (!err) {
-      classifier = result || bayes();
+    if (!err && result) {
+      return doTraining(result);
     }
 
     // expect both dataset and labels to be array of strings
@@ -31,34 +53,18 @@ const handleBayesPost = (req, res, dataset, labels) => {
       if (!err && data) {
         classifier = classifier.fromJson(data.toString());
       }
-
-      bayesModels.set(req.params.model, classifier, () => {});
-
-      dataset.forEach((v, i) => {
-        // normalize multiple space into one
-        classifier.learn(v.replace(/\s+/gi, ' '), labels[i]);
-      });
-      data = classifier.toJson();
-      fs.writeFile(dataFile, data, err => {
-        if (err) {
-          throw err;
-        }
-
-        // send a response message back on last iteration!
-        res.send({
-          message: `${dataset.length} samples added to database.`
-        });
-      });
+      doTraining(classifier || bayes());
     });
   });
 };
 
 router.post('/bayes/reset/:model', (req, res) => {
-  bayesModels.set(req.params.model, bayes(), () => {});
-  const dataFile = `${dataPath}/bayes_${req.params.model}`;
+  const modelName = req.params.model.replace(illegalChars, '');
+  bayesModels.set(modelName, bayes(), () => {});
+  const dataFile = `${dataPath}/bayes_${modelName}`;
   fs.unlink(dataFile, () => {
     res.send({
-      message: `${req.params.model} reset done.`
+      message: `${modelName} reset done.`
     });
   });
 });
@@ -92,25 +98,27 @@ router.post('/bayes/train/:model', (req, res) => {
 });
 
 const doClassify = (req, res) => {
+  const modelName = req.params.model.replace(illegalChars, '');
   const body = req.body;
-  const dataFile = `${dataPath}/bayes_${req.params.model}`;
+  const dataFile = `${dataPath}/bayes_${modelName}`;
 
-  bayesModels.get(req.params.model, (err, result) => {
+  bayesModels.get(modelName, (err, result) => {
     let classifier = bayes();
     if (!err) {
       classifier = result || bayes();
     }
+
     fs.readFile(dataFile, (err, data) => {
       if (!err && data) {
         // console.log(data.toString());
         classifier = bayes.fromJson(data.toString());
-        bayesModels.set(req.params.model, classifier, () => {});
+        bayesModels.set(modelName, classifier, () => {});
       }
 
       const dataset = body.dataset || [req.query.text];
       const rst = [];
       dataset.forEach(v => {
-        rst.push(classifier.categorize((v || '').replace(/\s+/gi, ' ')));
+        rst.push(classifier.categorize((v || '').toLowerCase()));
       });
       return res.send({
         result: rst
