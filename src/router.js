@@ -91,7 +91,7 @@ router.post('/bayes/train/:model', (req, res) => {
   handleBayesPost(req, res, req.body.dataset, req.body.labels);
 });
 
-router.post('/bayes/classify/:model', (req, res) => {
+const doClassify = (req, res) => {
   const body = req.body;
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
 
@@ -107,7 +107,7 @@ router.post('/bayes/classify/:model', (req, res) => {
         bayesModels.set(req.params.model, classifier, () => {});
       }
 
-      const dataset = body.dataset || [];
+      const dataset = body.dataset || [req.query.text];
       const rst = [];
       dataset.forEach(v => {
         rst.push(classifier.categorize((v || '').replace(/\s+/gi, ' ')));
@@ -117,6 +117,9 @@ router.post('/bayes/classify/:model', (req, res) => {
       });
     });
   });
-});
+};
+
+router.post('/bayes/classify/:model', doClassify);
+router.get('/bayes/classify/:model', doClassify);
 
 module.exports = router;

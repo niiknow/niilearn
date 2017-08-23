@@ -1,7 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-const router = require('./router');
+const routes = require('./router');
 
 const app = express();
 const _VERSION = process.env.API_VERSION || 1;
@@ -23,6 +23,13 @@ app.use(bodyParser.urlencoded({
   parameterLimit: 500000
 }));
 app.use(cors());
-app.use(`/api/v${_VERSION}`, router);
+
+app.get('/healthcheck', (req, res) => {
+  res.json({
+    ok: true
+  });
+});
+
+app.use(`/api/v${_VERSION}`, routes);
 
 module.exports = app;
