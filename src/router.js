@@ -9,7 +9,7 @@ const bayesModels = {};
 
 const handleBayesPost = (req, res, dataset, labels) => {
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
-  const classifier = bayesModels[req.params.model] || bayes();
+  let classifier = bayesModels[req.params.model] || bayes();
 
   if (dataset.length <= 0 || dataset.length !== labels.length) {
     return res.send({
@@ -19,8 +19,8 @@ const handleBayesPost = (req, res, dataset, labels) => {
 
   // expect both dataset and labels to be array of strings
   fs.readFile(dataFile, (err, data) => {
-    if (!err && data && data.length > 20) {
-      classifier.fromJson(data);
+    if (!err && data) {
+      classifier = classifier.fromJson(data.toString());
     }
 
     bayesModels[req.params.model] = classifier;
@@ -52,16 +52,17 @@ router.post('/bayes/reset/:model', (req, res) => {
   });
 });
 
-router.post('/bayes/train-csv/:labelField/:textField/:model', (req, res) => {
+router.post('/bayes/train-csv/:model', (req, res) => {
   // parse csv body
   const body = (req.rawBody || '').toString('utf8');
-  const labelField = req.params.labelField;
-  const textField = req.params.textField;
+  const textField = req.query.text || 'text';
+  const labelField = req.query.label || 'label';
   const dataset = [];
   const labels = [];
   const csvopts = {
     noheader: false
   };
+  console.log(req.query);
 
   csv(csvopts)
     .fromString(body)
@@ -88,7 +89,7 @@ router.post('/bayes/classify/:model', (req, res) => {
   }
   fs.readFile(dataFile, (err, data) => {
     if (!err && data) {
-      console.log(data.toString());
+      // console.log(data.toString());
       classifier = bayes.fromJson(data.toString());
       bayesModels[req.params.model] = classifier;
     }

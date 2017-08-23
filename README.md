@@ -3,7 +3,7 @@ Nodejs Machine Learning REST API
 
 post csv:
 ```
-curl --data-binary "@data.csv" http://localhost:8080/api/v1/bayes/train-csv/CategoryId/data
+curl --data-binary "@data.csv" http://localhost:8080/api/v1/bayes/train-csv/data?label=fieldName&text=fieldName
 ```
 
 ```
