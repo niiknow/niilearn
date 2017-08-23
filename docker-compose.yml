@@ -1,0 +1,13 @@
+version: "3.3"
+
+services:
+  niilearn:
+    image: niiknow/niilearn
+    container_name: niilearn
+    volumes:
+      - "/opt/app/data:/app/data"
+    ports:
+      - "8080:8080"
+    labels:
+      - "Machine Learning REST API"
+    restart: unless-stopped

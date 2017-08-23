@@ -1,0 +1,21 @@
+niilearn:
+  image: niiknow/niilearn:1.0.0
+  restart: always
+  volumes_from:
+    - niilearn-datavolume
+  ports:
+    - "9080:8080"
+  labels:
+    io.rancher.sidekicks: niilearn-datavolume
+    io.rancher.container.hostname_override: container_name
+    io.rancher.scheduler.affinity:host_label: host=9
+
+niilearn-datavolume:
+  net: none
+  labels:
+    io.rancher.container.hostname_override: container_name
+    io.rancher.container.start_once: true
+  volumes:
+    - /app/data
+  entrypoint: /bin/true
+  image: busybox
