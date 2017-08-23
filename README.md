@@ -1,15 +1,16 @@
 # niilearn
-Machine Learning REST API in nodejs
+Machine Learning REST API in nodejs.  
 
-This API implement naivebayes algorithm to classify your data.  It is useful to automatically identify category of categorical data type.  Examples:
+* This API implement naivebayes algorithm to classify your data.  It is useful to automatically identify category of categorical data type.  Examples:
 
-* Product/Item Category
-* Language
-* Gender
-* etc....
+    - Product/Item Category
+    - Language
+    - Gender
+    - etc....
 
-Another useful of this API is that it allow for continous training of your data. The more training of your model with good data, the better the quality of the result.
+* Another useful of this API is that it allow for continous training of your data. The more training of your model with good data, the better the quality of the result.
 
+* A completely independent microservice for running Saas style Machine Learning API like Monkey Learn.   Simply mount docker '/app/data' volume for data persistence.
 
 # API
 
@@ -45,5 +46,9 @@ pass in 'dataset' array to bulk classify or a single item to classify only one. 
     result: []
 }
 ```
+
+# TODO
+- [] additional algorithm
+- [] twitter sentiment example
 
 # MIT
