@@ -8,7 +8,7 @@ Machine Learning REST API in nodejs.
     - Gender
     - etc....
 
-* This API also allow for continous training of your data. The more you train of your model with good data, the better the quality of the result.
+* This API also allow for continous training of your data.  This will help improve the output quality as you train your model overtime.
 
 * A completely independent microservice (with docker) for running Saas style Machine Learning API like Monkey Learn.  You can also mount docker volume '/app/data' for data persistence.
 
