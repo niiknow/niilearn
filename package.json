@@ -1,6 +1,6 @@
 {
   "name": "niilearn",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Machine Learning REST API",
   "main": "index.js",
   "scripts": {
