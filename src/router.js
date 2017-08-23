@@ -106,23 +106,15 @@ router.post('/bayes/classify/:model', (req, res) => {
         classifier = bayes.fromJson(data.toString());
         bayesModels.set(req.params.model, classifier, () => {});
       }
-      if (body.text) {
-        const rst = classifier.categorize(body.text.replace(/\s+/gi, ' '));
-        res.send({
-          text: body.text,
-          result: [rst]
-        });
-      } else {
-        // handle bulk dataset
-        const dataset = body.dataset || [];
-        const rst = [];
-        dataset.forEach(v => {
-          rst.push(classifier.categorize((v || '').replace(/\s+/gi, ' ')));
-        });
-        res.send({
-          result: rst
-        });
-      }
+
+      const dataset = body.dataset || [];
+      const rst = [];
+      dataset.forEach(v => {
+        rst.push(classifier.categorize((v || '').replace(/\s+/gi, ' ')));
+      });
+      return res.send({
+        result: rst
+      });
     });
   });
 });
