@@ -1,9 +1,7 @@
 const fs = require('fs');
 const csv = require('csvtojson');
 const express = require('express');
-const {
-  Bayes
-} = require('nodeml');
+const bayes = require('bayes');
 
 const router = express();
 const dataPath = process.env.NIILEARN_DATAPATH || '/app/data';
@@ -11,34 +9,54 @@ const bayesModels = {};
 
 const handleBayesPost = (req, res, dataset, labels) => {
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
-  const bayes = bayesModels[req.params.model] || new Bayes();
+  const classifier = bayesModels[req.params.model] || bayes();
 
   if (dataset.length <= 0 || dataset.length !== labels.length) {
-    return res.send('data is empty or length does not match labels length.');
+    return res.send({
+      message: 'data is empty or length does not match labels length.'
+    });
   }
 
+  // expect both dataset and labels to be array of strings
   fs.readFile(dataFile, (err, data) => {
     if (!err && data && data.length > 20) {
-      bayes.setModel(JSON.parse(data));
+      classifier.fromJson(data);
     }
 
-    bayes.train(dataset, labels);
-    data = bayes.getModel();
+    bayesModels[req.params.model] = classifier;
+    dataset.forEach((v, i) => {
+      // normalize multiple space into one
+      classifier.learn(v.replace(/\s+/gi, ' '), labels[i]);
+    });
+    data = classifier.toJson;
     fs.writeFile(dataFile, JSON.stringify(data, null, 2), err => {
       if (err) {
         throw err;
       }
 
       // send a response message back on last iteration!
-      res.send('Input added to database, classifier updated. Thank you.');
+      res.send({
+        message: 'Input added to database, classifier updated. Thank you.'
+      });
     });
   });
 };
 
-router.post('/bayes/train-csv/:label/:model', (req, res) => {
+router.post('/bayes/reset/:model', (req, res) => {
+  bayesModels[req.params.model] = bayes();
+  const dataFile = `${dataPath}/bayes_${req.params.model}`;
+  fs.unlink(dataFile, () => {
+    res.send({
+      message: `${req.params.model} reset done.`
+    });
+  });
+});
+
+router.post('/bayes/train-csv/:labelField/:textField/:model', (req, res) => {
   // parse csv body
-  const body = req.rawBody.toString('utf8');
-  const label = req.params.label;
+  const body = (req.rawBody || '').toString('utf8');
+  const labelField = req.params.labelField;
+  const textField = req.params.textField;
   const dataset = [];
   const labels = [];
   const csvopts = {
@@ -48,15 +66,11 @@ router.post('/bayes/train-csv/:label/:model', (req, res) => {
   csv(csvopts)
     .fromString(body)
     .on('json', jsonObj => {
-      const cat = jsonObj[label];
-      labels.push(cat);
-      delete jsonObj.CircularItemId;
-      delete jsonObj[label];
-      dataset.push(jsonObj);
-      console.log(cat, JSON.stringify(jsonObj));
+      if (jsonObj[textField]) {
+        dataset.push(jsonObj[textField]);
+        labels.push(jsonObj[labelField]);
+      }
     }).on('done', () => {
-      // console.log(dataset);
-      // console.log(labels);
       handleBayesPost(req, res, dataset, labels);
     });
 });
@@ -68,18 +82,20 @@ router.post('/bayes/train/:model', (req, res) => {
 router.post('/bayes/classify/:model', (req, res) => {
   const body = req.body;
   const dataFile = `${dataPath}/bayes_${req.params.model}`;
-  let bayes = bayesModels[req.params.model];
-  if (!bayes) {
-    bayes = new Bayes();
+  let classifier = bayesModels[req.params.model];
+  if (!classifier) {
+    classifier = bayes();
   }
   fs.readFile(dataFile, (err, data) => {
     if (!err && data && data.length > 20) {
-      bayes.setModel(JSON.parse(data));
-      bayesModels[req.params.model] = bayes;
+      classifier = bayes.fromJson(data);
+      bayesModels[req.params.model] = classifier;
     }
-    const rst = bayes.test(body);
-    console.log(body);
-    res.send(rst);
+    const rst = classifier.categorize(body.Search.replace(/\s+/gi, ' '));
+    res.send({
+      data: body,
+      result: rst
+    });
   });
 });
 
