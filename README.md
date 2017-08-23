@@ -1,15 +1,15 @@
 # niilearn
-Nodejs Machine Learning REST API
+Machine Learning REST API in nodejs
 
-post csv:
-```
-curl --data-binary "@data.csv" http://localhost:8080/api/v1/bayes/train-csv/modelName?label=fieldName&text=fieldName
-```
+This API implement naivebayes algorithm to classify your data.  It is useful to automatically identify category of categorical data type.  Examples:
 
-classify:
-```
-curl -H "Content-Type: application/json" -X POST -d '{"valid": "json"}' http://localhost:8080/api/v1/bayes/classify/modelName
-```
+* Product/Item Category
+* Language
+* Gender
+* etc....
+
+Another useful of this API is that it allow for continous training of your data. The more training of your model with good data, the better the quality of the result.
+
 
 # API
 
@@ -45,3 +45,5 @@ pass in 'dataset' array to bulk classify or a single item to classify only one. 
     result: []
 }
 ```
+
+# MIT
